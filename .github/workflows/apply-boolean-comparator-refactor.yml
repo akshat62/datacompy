@@ -1,9 +1,9 @@
 name: Apply Boolean Comparator Refactor
 
 on:
-  push:
+  pull_request:
     branches:
-      - feat/boolean-comparator-parity
+      - main
 
 permissions:
   contents: write
