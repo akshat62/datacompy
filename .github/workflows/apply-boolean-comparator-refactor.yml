@@ -1,0 +1,153 @@
+name: Apply Boolean Comparator Refactor
+
+on:
+  push:
+    branches:
+      - feat/boolean-comparator-parity
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/boolean-comparator-parity
+          fetch-depth: 0
+
+      - name: Register dedicated Boolean comparators
+        shell: python
+        run: |
+          from pathlib import Path
+
+          init_path = Path("datacompy/comparator/__init__.py")
+          init_path.write_text('''#
+          # Copyright 2026 Capital One Services, LLC
+          #
+          # Licensed under the Apache License, Version 2.0 (the "License");
+          # you may not use this file except in compliance with the License.
+          # You may obtain a copy of the License at
+          #
+          #     http://www.apache.org/licenses/LICENSE-2.0
+          #
+          # Unless required by applicable law or agreed to in writing, software
+          # distributed under the License is distributed on an "AS IS" BASIS,
+          # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+          # See the License for the specific language governing permissions and
+          # limitations under the License.
+
+          """Comparator classes."""
+
+          from datacompy.comparator.array import (
+              PandasArrayLikeComparator,
+              PolarsArrayLikeComparator,
+              SnowflakeArrayLikeComparator,
+              SparkArrayLikeComparator,
+          )
+          from datacompy.comparator.boolean import (
+              PandasBooleanComparator,
+              PolarsBooleanComparator,
+              SnowflakeBooleanComparator,
+              SparkBooleanComparator,
+          )
+          from datacompy.comparator.numeric import (
+              PandasNumericComparator,
+              PolarsNumericComparator,
+              SnowflakeNumericComparator,
+              SparkNumericComparator,
+          )
+          from datacompy.comparator.string import (
+              PandasStringComparator,
+              PolarsStringComparator,
+              SnowflakeStringComparator,
+              SparkStringComparator,
+          )
+
+          __all__ = [
+              "PandasArrayLikeComparator",
+              "PandasBooleanComparator",
+              "PandasNumericComparator",
+              "PandasStringComparator",
+              "PolarsArrayLikeComparator",
+              "PolarsBooleanComparator",
+              "PolarsNumericComparator",
+              "PolarsStringComparator",
+              "SnowflakeArrayLikeComparator",
+              "SnowflakeBooleanComparator",
+              "SnowflakeNumericComparator",
+              "SnowflakeStringComparator",
+              "SparkArrayLikeComparator",
+              "SparkBooleanComparator",
+              "SparkNumericComparator",
+              "SparkStringComparator",
+          ]
+          '''.replace("          ", ""))
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file_path = Path(path)
+              text = file_path.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"Expected one match in {path}, found {count}: {old!r}")
+              file_path.write_text(text.replace(old, new, 1))
+
+          replace_once(
+              "datacompy/polars.py",
+              "    PolarsArrayLikeComparator,\n    PolarsNumericComparator,",
+              "    PolarsArrayLikeComparator,\n    PolarsBooleanComparator,\n    PolarsNumericComparator,",
+          )
+          replace_once(
+              "datacompy/polars.py",
+              "    PolarsArrayLikeComparator(),\n    PolarsNumericComparator(),",
+              "    PolarsArrayLikeComparator(),\n    PolarsBooleanComparator(),\n    PolarsNumericComparator(),",
+          )
+          replace_once(
+              "datacompy/polars.py",
+              "    for comparator in comparators_:\n        if isinstance(comparator, PolarsNumericComparator):",
+              "    for comparator in comparators_:\n        if isinstance(comparator, PolarsBooleanComparator):\n            compare = comparator.compare(col_1, col_2)\n        elif isinstance(comparator, PolarsNumericComparator):",
+          )
+
+          replace_once(
+              "datacompy/spark/sql.py",
+              "    SparkArrayLikeComparator,\n    SparkNumericComparator,",
+              "    SparkArrayLikeComparator,\n    SparkBooleanComparator,\n    SparkNumericComparator,",
+          )
+          replace_once(
+              "datacompy/spark/sql.py",
+              "    SparkArrayLikeComparator(),\n    SparkNumericComparator(),",
+              "    SparkArrayLikeComparator(),\n    SparkBooleanComparator(),\n    SparkNumericComparator(),",
+          )
+          replace_once(
+              "datacompy/spark/sql.py",
+              "    for comparator in comparators_:\n        if isinstance(comparator, SparkNumericComparator):",
+              "    for comparator in comparators_:\n        if isinstance(comparator, SparkBooleanComparator):\n            compare = comparator.compare(dataframe, col_1, col_2)\n        elif isinstance(comparator, SparkNumericComparator):",
+          )
+
+          replace_once(
+              "datacompy/snowflake.py",
+              "    SnowflakeArrayLikeComparator,\n    SnowflakeNumericComparator,",
+              "    SnowflakeArrayLikeComparator,\n    SnowflakeBooleanComparator,\n    SnowflakeNumericComparator,",
+          )
+          replace_once(
+              "datacompy/snowflake.py",
+              "    SnowflakeArrayLikeComparator(),\n    SnowflakeNumericComparator(),",
+              "    SnowflakeArrayLikeComparator(),\n    SnowflakeBooleanComparator(),\n    SnowflakeNumericComparator(),",
+          )
+          replace_once(
+              "datacompy/snowflake.py",
+              "    for comparator in comparators_:\n        if isinstance(comparator, SnowflakeNumericComparator):",
+              "    for comparator in comparators_:\n        if isinstance(comparator, SnowflakeBooleanComparator):\n            compare = comparator.compare(dataframe, col_1, col_2, col_match)\n        elif isinstance(comparator, SnowflakeNumericComparator):",
+          )
+
+          Path(".github/workflows/apply-boolean-comparator-refactor.yml").unlink()
+
+      - name: Commit corrected design
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add datacompy/comparator/__init__.py datacompy/polars.py datacompy/spark/sql.py datacompy/snowflake.py .github/workflows/apply-boolean-comparator-refactor.yml
+          git commit -m "Register dedicated Boolean comparators by backend"
+          git push origin HEAD:feat/boolean-comparator-parity
