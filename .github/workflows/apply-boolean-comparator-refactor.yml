@@ -19,7 +19,6 @@ jobs:
           fetch-depth: 0
 
       - name: Register dedicated Boolean comparators
-        continue-on-error: true
         shell: python
         run: |
           from pathlib import Path
@@ -86,38 +85,37 @@ jobs:
           ]
           '''.replace("          ", ""))
 
-          def apply(path: str, replacements: list[tuple[str, str]]) -> None:
+          def register(path: str, class_name: str) -> None:
               file_path = Path(path)
               text = file_path.read_text()
-              for old, new in replacements:
-                  if new not in text:
-                      text = text.replace(old, new, 1)
+              array_name = class_name.replace("Boolean", "ArrayLike")
+              numeric_name = class_name.replace("Boolean", "Numeric")
+
+              import_anchor = f"    {array_name},\n"
+              import_line = f"    {class_name},\n"
+              if import_line not in text:
+                  if import_anchor not in text:
+                      raise RuntimeError(f"Import anchor not found in {path}")
+                  text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+              list_anchor = f"    {array_name}(),\n"
+              list_line = f"    {class_name}(),\n"
+              if list_line not in text:
+                  if list_anchor not in text:
+                      raise RuntimeError(f"Comparator-list anchor not found in {path}")
+                  text = text.replace(list_anchor, list_anchor + list_line, 1)
+
               file_path.write_text(text)
 
-          apply("datacompy/polars.py", [
-              ("    PolarsArrayLikeComparator,\n    PolarsNumericComparator,", "    PolarsArrayLikeComparator,\n    PolarsBooleanComparator,\n    PolarsNumericComparator,"),
-              ("    PolarsArrayLikeComparator(),\n    PolarsNumericComparator(),", "    PolarsArrayLikeComparator(),\n    PolarsBooleanComparator(),\n    PolarsNumericComparator(),"),
-              ("    for comparator in comparators_:\n        if isinstance(comparator, PolarsNumericComparator):", "    for comparator in comparators_:\n        if isinstance(comparator, PolarsBooleanComparator):\n            compare = comparator.compare(col_1, col_2)\n        elif isinstance(comparator, PolarsNumericComparator):"),
-          ])
+          register("datacompy/polars.py", "PolarsBooleanComparator")
+          register("datacompy/spark.py", "SparkBooleanComparator")
+          register("datacompy/snowflake.py", "SnowflakeBooleanComparator")
 
-          apply("datacompy/spark/sql.py", [
-              ("    SparkArrayLikeComparator,\n    SparkNumericComparator,", "    SparkArrayLikeComparator,\n    SparkBooleanComparator,\n    SparkNumericComparator,"),
-              ("    SparkArrayLikeComparator(),\n    SparkNumericComparator(),", "    SparkArrayLikeComparator(),\n    SparkBooleanComparator(),\n    SparkNumericComparator(),"),
-              ("    for comparator in comparators_:\n        if isinstance(comparator, SparkNumericComparator):", "    for comparator in comparators_:\n        if isinstance(comparator, SparkBooleanComparator):\n            compare = comparator.compare(dataframe, col_1, col_2)\n        elif isinstance(comparator, SparkNumericComparator):"),
-          ])
-
-          apply("datacompy/snowflake.py", [
-              ("    SnowflakeArrayLikeComparator,\n    SnowflakeNumericComparator,", "    SnowflakeArrayLikeComparator,\n    SnowflakeBooleanComparator,\n    SnowflakeNumericComparator,"),
-              ("    SnowflakeArrayLikeComparator(),\n    SnowflakeNumericComparator(),", "    SnowflakeArrayLikeComparator(),\n    SnowflakeBooleanComparator(),\n    SnowflakeNumericComparator(),"),
-              ("    for comparator in comparators_:\n        if isinstance(comparator, SnowflakeNumericComparator):", "    for comparator in comparators_:\n        if isinstance(comparator, SnowflakeBooleanComparator):\n            compare = comparator.compare(dataframe, col_1, col_2, col_match)\n        elif isinstance(comparator, SnowflakeNumericComparator):"),
-          ])
-
-      - name: Commit refactor output
+      - name: Commit corrected design
         run: |
+          rm .github/workflows/apply-boolean-comparator-refactor.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add datacompy/comparator/__init__.py datacompy/polars.py datacompy/spark/sql.py datacompy/snowflake.py
-          if ! git diff --cached --quiet; then
-            git commit -m "Register dedicated Boolean comparators by backend"
-            git push origin HEAD:feat/boolean-comparator-parity
-          fi
+          git add datacompy/comparator/__init__.py datacompy/polars.py datacompy/spark.py datacompy/snowflake.py .github/workflows/apply-boolean-comparator-refactor.yml
+          git commit -m "Register dedicated Boolean comparators by backend"
+          git push origin HEAD:feat/boolean-comparator-parity
