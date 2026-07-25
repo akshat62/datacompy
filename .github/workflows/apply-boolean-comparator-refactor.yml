@@ -23,8 +23,7 @@ jobs:
         run: |
           from pathlib import Path
 
-          init_path = Path("datacompy/comparator/__init__.py")
-          init_path.write_text('''#
+          Path("datacompy/comparator/__init__.py").write_text('''#
           # Copyright 2026 Capital One Services, LLC
           #
           # Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,60 +85,71 @@ jobs:
           ]
           '''.replace("          ", ""))
 
-          def replace_once(path: str, old: str, new: str) -> None:
+          def apply(path: str, replacements: list[tuple[str, str]], marker: str) -> None:
               file_path = Path(path)
               text = file_path.read_text()
-              count = text.count(old)
-              if count != 1:
-                  raise RuntimeError(f"Expected one match in {path}, found {count}: {old!r}")
-              file_path.write_text(text.replace(old, new, 1))
+              for old, new in replacements:
+                  if new not in text:
+                      text = text.replace(old, new, 1)
+              if marker not in text:
+                  raise RuntimeError(f"Boolean comparator registration missing in {path}")
+              file_path.write_text(text)
 
-          replace_once(
+          apply(
               "datacompy/polars.py",
-              "    PolarsArrayLikeComparator,\n    PolarsNumericComparator,",
-              "    PolarsArrayLikeComparator,\n    PolarsBooleanComparator,\n    PolarsNumericComparator,",
-          )
-          replace_once(
-              "datacompy/polars.py",
-              "    PolarsArrayLikeComparator(),\n    PolarsNumericComparator(),",
-              "    PolarsArrayLikeComparator(),\n    PolarsBooleanComparator(),\n    PolarsNumericComparator(),",
-          )
-          replace_once(
-              "datacompy/polars.py",
-              "    for comparator in comparators_:\n        if isinstance(comparator, PolarsNumericComparator):",
-              "    for comparator in comparators_:\n        if isinstance(comparator, PolarsBooleanComparator):\n            compare = comparator.compare(col_1, col_2)\n        elif isinstance(comparator, PolarsNumericComparator):",
-          )
-
-          replace_once(
-              "datacompy/spark/sql.py",
-              "    SparkArrayLikeComparator,\n    SparkNumericComparator,",
-              "    SparkArrayLikeComparator,\n    SparkBooleanComparator,\n    SparkNumericComparator,",
-          )
-          replace_once(
-              "datacompy/spark/sql.py",
-              "    SparkArrayLikeComparator(),\n    SparkNumericComparator(),",
-              "    SparkArrayLikeComparator(),\n    SparkBooleanComparator(),\n    SparkNumericComparator(),",
-          )
-          replace_once(
-              "datacompy/spark/sql.py",
-              "    for comparator in comparators_:\n        if isinstance(comparator, SparkNumericComparator):",
-              "    for comparator in comparators_:\n        if isinstance(comparator, SparkBooleanComparator):\n            compare = comparator.compare(dataframe, col_1, col_2)\n        elif isinstance(comparator, SparkNumericComparator):",
+              [
+                  (
+                      "    PolarsArrayLikeComparator,\n    PolarsNumericComparator,",
+                      "    PolarsArrayLikeComparator,\n    PolarsBooleanComparator,\n    PolarsNumericComparator,",
+                  ),
+                  (
+                      "    PolarsArrayLikeComparator(),\n    PolarsNumericComparator(),",
+                      "    PolarsArrayLikeComparator(),\n    PolarsBooleanComparator(),\n    PolarsNumericComparator(),",
+                  ),
+                  (
+                      "    for comparator in comparators_:\n        if isinstance(comparator, PolarsNumericComparator):",
+                      "    for comparator in comparators_:\n        if isinstance(comparator, PolarsBooleanComparator):\n            compare = comparator.compare(col_1, col_2)\n        elif isinstance(comparator, PolarsNumericComparator):",
+                  ),
+              ],
+              "if isinstance(comparator, PolarsBooleanComparator):",
           )
 
-          replace_once(
-              "datacompy/snowflake.py",
-              "    SnowflakeArrayLikeComparator,\n    SnowflakeNumericComparator,",
-              "    SnowflakeArrayLikeComparator,\n    SnowflakeBooleanComparator,\n    SnowflakeNumericComparator,",
+          apply(
+              "datacompy/spark/sql.py",
+              [
+                  (
+                      "    SparkArrayLikeComparator,\n    SparkNumericComparator,",
+                      "    SparkArrayLikeComparator,\n    SparkBooleanComparator,\n    SparkNumericComparator,",
+                  ),
+                  (
+                      "    SparkArrayLikeComparator(),\n    SparkNumericComparator(),",
+                      "    SparkArrayLikeComparator(),\n    SparkBooleanComparator(),\n    SparkNumericComparator(),",
+                  ),
+                  (
+                      "    for comparator in comparators_:\n        if isinstance(comparator, SparkNumericComparator):",
+                      "    for comparator in comparators_:\n        if isinstance(comparator, SparkBooleanComparator):\n            compare = comparator.compare(dataframe, col_1, col_2)\n        elif isinstance(comparator, SparkNumericComparator):",
+                  ),
+              ],
+              "if isinstance(comparator, SparkBooleanComparator):",
           )
-          replace_once(
+
+          apply(
               "datacompy/snowflake.py",
-              "    SnowflakeArrayLikeComparator(),\n    SnowflakeNumericComparator(),",
-              "    SnowflakeArrayLikeComparator(),\n    SnowflakeBooleanComparator(),\n    SnowflakeNumericComparator(),",
-          )
-          replace_once(
-              "datacompy/snowflake.py",
-              "    for comparator in comparators_:\n        if isinstance(comparator, SnowflakeNumericComparator):",
-              "    for comparator in comparators_:\n        if isinstance(comparator, SnowflakeBooleanComparator):\n            compare = comparator.compare(dataframe, col_1, col_2, col_match)\n        elif isinstance(comparator, SnowflakeNumericComparator):",
+              [
+                  (
+                      "    SnowflakeArrayLikeComparator,\n    SnowflakeNumericComparator,",
+                      "    SnowflakeArrayLikeComparator,\n    SnowflakeBooleanComparator,\n    SnowflakeNumericComparator,",
+                  ),
+                  (
+                      "    SnowflakeArrayLikeComparator(),\n    SnowflakeNumericComparator(),",
+                      "    SnowflakeArrayLikeComparator(),\n    SnowflakeBooleanComparator(),\n    SnowflakeNumericComparator(),",
+                  ),
+                  (
+                      "    for comparator in comparators_:\n        if isinstance(comparator, SnowflakeNumericComparator):",
+                      "    for comparator in comparators_:\n        if isinstance(comparator, SnowflakeBooleanComparator):\n            compare = comparator.compare(dataframe, col_1, col_2, col_match)\n        elif isinstance(comparator, SnowflakeNumericComparator):",
+                  ),
+              ],
+              "if isinstance(comparator, SnowflakeBooleanComparator):",
           )
 
           Path(".github/workflows/apply-boolean-comparator-refactor.yml").unlink()
