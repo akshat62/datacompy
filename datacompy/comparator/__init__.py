@@ -29,9 +29,9 @@ from datacompy.comparator.boolean import (
 )
 from datacompy.comparator.numeric import (
     PandasNumericComparator,
-    PolarsNumericComparator as _PolarsNumericComparator,
-    SnowflakeNumericComparator as _SnowflakeNumericComparator,
-    SparkNumericComparator as _SparkNumericComparator,
+    PolarsNumericComparator,
+    SnowflakeNumericComparator,
+    SparkNumericComparator,
 )
 from datacompy.comparator.string import (
     PandasStringComparator,
@@ -39,41 +39,6 @@ from datacompy.comparator.string import (
     SnowflakeStringComparator,
     SparkStringComparator,
 )
-
-
-class PolarsNumericComparator(_PolarsNumericComparator):
-    """Polars numeric comparator with Boolean dispatch parity."""
-
-    def compare(self, col1, col2, rtol=1e-5, atol=1e-8):
-        boolean_result = PolarsBooleanComparator().compare(col1, col2)
-        if boolean_result is not None:
-            return boolean_result
-        return super().compare(col1, col2, rtol=rtol, atol=atol)
-
-
-class SparkNumericComparator(_SparkNumericComparator):
-    """Spark numeric comparator with Boolean dispatch parity."""
-
-    def compare(self, dataframe, col1, col2, rtol=1e-5, atol=1e-8):
-        boolean_result = SparkBooleanComparator().compare(dataframe, col1, col2)
-        if boolean_result is not None:
-            return boolean_result
-        return super().compare(dataframe, col1, col2, rtol=rtol, atol=atol)
-
-
-class SnowflakeNumericComparator(_SnowflakeNumericComparator):
-    """Snowflake numeric comparator with Boolean dispatch parity."""
-
-    def compare(self, dataframe, col1, col2, col_match, rtol=1e-5, atol=1e-8):
-        boolean_result = SnowflakeBooleanComparator().compare(
-            dataframe, col1, col2, col_match
-        )
-        if boolean_result is not None:
-            return boolean_result
-        return super().compare(
-            dataframe, col1, col2, col_match, rtol=rtol, atol=atol
-        )
-
 
 __all__ = [
     "PandasArrayLikeComparator",
