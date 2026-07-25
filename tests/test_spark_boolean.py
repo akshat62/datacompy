@@ -37,9 +37,7 @@ def test_spark_boolean_columns_equal_with_nulls(spark_session):
     )
 
     actual = (
-        dataframe.withColumn(
-            "actual", columns_equal(dataframe, "left", "right")
-        )
+        dataframe.withColumn("actual", columns_equal(dataframe, "left", "right"))
         .select("actual")
         .toPandas()["actual"]
     )

@@ -75,9 +75,7 @@ class PandasBooleanComparator(BaseComparator):
             return None
         if col1.shape != col2.shape:
             return None
-        return (
-            col1.eq(col2) | (col1.isna() & col2.isna())
-        ).fillna(False).astype(bool)
+        return (col1.eq(col2) | (col1.isna() & col2.isna())).fillna(False).astype(bool)
 
 
 class PolarsBooleanComparator(BaseComparator):
@@ -115,9 +113,7 @@ class SparkBooleanComparator(BaseComparator):
         both_null = boolean.isNull() & numeric.isNull()
         values_equal = (
             boolean.eqNullSafe(psf.lit(True)) & numeric.eqNullSafe(psf.lit(1))
-        ) | (
-            boolean.eqNullSafe(psf.lit(False)) & numeric.eqNullSafe(psf.lit(0))
-        )
+        ) | (boolean.eqNullSafe(psf.lit(False)) & numeric.eqNullSafe(psf.lit(0)))
         return both_null | values_equal
 
     def compare(
@@ -153,9 +149,7 @@ class SnowflakeBooleanComparator(BaseComparator):
         both_null = spf.is_null(boolean) & spf.is_null(numeric)
         values_equal = (
             boolean.eqNullSafe(spf.lit(True)) & numeric.eqNullSafe(spf.lit(1))
-        ) | (
-            boolean.eqNullSafe(spf.lit(False)) & numeric.eqNullSafe(spf.lit(0))
-        )
+        ) | (boolean.eqNullSafe(spf.lit(False)) & numeric.eqNullSafe(spf.lit(0)))
         return both_null | values_equal
 
     def compare(
